@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Private options alerts with transparent bot-fed trade results."/>
+<title>{{ brand }}</title>
+<style>
+:root{
+  --forest:#07170d;
+  --forest2:#0b2112;
+  --panel:#102a18;
+  --panel2:#13341e;
+  --emerald:#21b75b;
+  --emerald2:#58d87f;
+  --gold:#f3c84b;
+  --gold2:#ffe08a;
+  --cream:#fff8df;
+  --white:#f7fff9;
+  --muted:#a8c7af;
+  --line:#285235;
+  --loss:#ff7777;
+  --shadow:0 28px 75px rgba(0,0,0,.34);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--white);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at 18% 0%,rgba(33,183,91,.15),transparent 30%),
+    radial-gradient(circle at 86% 8%,rgba(243,200,75,.10),transparent 28%),
+    linear-gradient(180deg,var(--forest),#030a05 78%);
+}
+.shell{width:min(1160px,calc(100% - 32px));margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;padding:24px 0}
+.brand{display:flex;align-items:center;gap:11px;font-weight:950;letter-spacing:-.025em}
+.mark{
+  width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  color:#10210f;background:linear-gradient(135deg,var(--gold2),var(--gold));
+  font-weight:1000;box-shadow:0 12px 32px rgba(243,200,75,.18)
+}
+.live{
+  display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;
+  border:1px solid rgba(88,216,127,.25);background:rgba(33,183,91,.08);
+  color:#c9f8d8;font-size:12px;font-weight:800
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--emerald2);box-shadow:0 0 15px var(--emerald)}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:center;padding:72px 0 50px}
+.eyebrow{color:var(--gold);font-size:12px;font-weight:950;letter-spacing:.14em;text-transform:uppercase}
+h1{font-size:clamp(46px,7vw,78px);line-height:.98;letter-spacing:-.058em;margin:14px 0 20px;max-width:760px}
+.hero p{max-width:720px;color:var(--muted);font-size:18px;line-height:1.7;margin:0}
+.gold-word{color:var(--gold2)}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.btn{
+  min-height:52px;padding:0 21px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;
+  text-decoration:none;font-size:14px;font-weight:950;transition:.18s ease;border:1px solid transparent
+}
+.btn:hover{transform:translateY(-1px)}
+.subscribe{
+  color:#061107;background:linear-gradient(135deg,var(--emerald2),var(--emerald));
+  box-shadow:0 16px 38px rgba(33,183,91,.20)
+}
+.results{
+  color:#171306;background:linear-gradient(135deg,var(--gold2),var(--gold));
+  border-color:#f8dc7a;box-shadow:0 16px 38px rgba(243,200,75,.17)
+}
+.card{
+  position:relative;overflow:hidden;padding:27px;border-radius:22px;
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(19,52,30,.97),rgba(10,31,17,.97));
+  box-shadow:var(--shadow)
+}
+.card:after{
+  content:"";position:absolute;width:210px;height:210px;border-radius:50%;right:-105px;top:-115px;
+  background:rgba(243,200,75,.08)
+}
+.price-label{color:var(--gold2);font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-weight:900}
+.price{font-size:44px;font-weight:1000;letter-spacing:-.045em;margin:8px 0 21px}
+.price span{font-size:14px;color:var(--muted);font-weight:650;letter-spacing:0}
+.feature{display:flex;gap:10px;align-items:flex-start;margin:13px 0;color:#e7f5e9;font-size:14px}
+.check{
+  width:21px;height:21px;display:grid;place-items:center;border-radius:50%;flex:0 0 auto;
+  color:#112313;background:var(--gold);font-size:11px;font-weight:1000;margin-top:1px
+}
+.rule{
+  margin-top:17px;padding:13px 14px;border-radius:12px;
+  background:rgba(243,200,75,.06);border:1px solid rgba(243,200,75,.18);
+  color:#e9dca6;font-size:12px;line-height:1.55
+}
+section{padding-top:72px}
+.section-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:18px}
+h2{font-size:31px;letter-spacing:-.04em;margin:0}
+.sub{color:var(--muted);margin:8px 0 0;line-height:1.55}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.metric{
+  min-height:108px;padding:18px;border-radius:16px;background:rgba(16,42,24,.88);
+  border:1px solid var(--line)
+}
+.metric-label{color:var(--muted);font-size:12px;margin-bottom:8px}
+.metric-value{font-size:28px;font-weight:1000;letter-spacing:-.04em}
+.metric-value.gold{color:var(--gold2)}
+.table-card{overflow:hidden;border:1px solid var(--line);border-radius:18px;background:rgba(16,42,24,.88);box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:840px}
+th,td{padding:15px 17px;text-align:left;white-space:nowrap;border-bottom:1px solid rgba(40,82,53,.72)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#9fbea6;background:rgba(255,255,255,.012)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(243,200,75,.025)}
+.symbol{font-weight:1000}
+.contract{color:var(--gold2);font-weight:850}
+.pos{color:var(--emerald2);font-weight:1000}
+.neg{color:var(--loss);font-weight:1000}
+.pill{
+  display:inline-flex;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:900;
+  border:1px solid rgba(243,200,75,.22);background:rgba(243,200,75,.06);color:var(--gold2)
+}
+.pending{
+  margin-top:18px;padding:16px;border-radius:14px;border:1px solid rgba(243,200,75,.2);
+  background:rgba(243,200,75,.055);color:#ddcf9c;font-size:13px;line-height:1.55
+}
+.legacy-title{color:#dce9df}
+.cta{
+  margin-top:72px;padding:34px;border-radius:22px;border:1px solid rgba(243,200,75,.25);
+  background:linear-gradient(135deg,rgba(33,183,91,.12),rgba(243,200,75,.08));
+  display:flex;justify-content:space-between;gap:25px;align-items:center
+}
+.cta p{color:var(--muted);margin:8px 0 0}
+footer{padding:38px 0 55px;color:#719279;font-size:11px;line-height:1.7}
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;padding-top:48px}.metrics{grid-template-columns:repeat(2,1fr)}
+  .section-head{display:block}.cta{display:block}
+}
+@media(max-width:560px){
+  .shell{width:min(100% - 22px,1160px)}.actions{display:grid}.btn{width:100%}
+  .metrics{grid-template-columns:1fr 1fr}.metric:last-child{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div class="brand"><div class="mark">$</div><div>{{ brand }}</div></div>
+  <div class="live"><span class="dot"></span>Bot-fed proof</div>
+</header>
+
+<main>
+<section class="hero">
+  <div>
+    <div class="eyebrow">Private options alerts</div>
+    <h1>Follow the signal. <span class="gold-word">See the result.</span></h1>
+    <p>
+      Real listed CALL and PUT contracts, exact strike and expiration, and a public
+      bot-fed record of closed trades. No cropped screenshots required.
+    </p>
+    <div class="actions">
+      {% if bot_username %}
+      <a class="btn subscribe" href="https://t.me/{{ bot_username }}?start=subscribe">
+        Subscribe — {{ stars }} ⭐ / 30 days
+      </a>
+      {% endif %}
+      <a class="btn results" href="#results">View Results</a>
+    </div>
+  </div>
+
+  <aside class="card">
+    <div class="price-label">Private membership</div>
+    <div class="price">{{ stars }} ⭐ <span>/ 30 days</span></div>
+    <div class="feature"><span class="check">✓</span><span>Alerts-only Telegram room</span></div>
+    <div class="feature"><span class="check">✓</span><span>Separate members chat</span></div>
+    <div class="feature"><span class="check">✓</span><span>Real listed CALL / PUT contract selection</span></div>
+    <div class="feature"><span class="check">✓</span><span>Recurring Stars access automation</span></div>
+    <div class="feature"><span class="check">✓</span><span>Transparent closed-trade record</span></div>
+    <div class="rule">Green for growth. Gold for the proof.</div>
+  </aside>
+</section>
+
+<section id="results">
+  <div class="section-head">
+    <div>
+      <h2>Real option-contract performance</h2>
+      <p class="sub">Actual option rows only: strike + expiration + recorded ASK entry + BID exit.</p>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Closed options</div><div class="metric-value gold" id="ototal">—</div></div>
+    <div class="metric"><div class="metric-label">Winners</div><div class="metric-value" id="owins">—</div></div>
+    <div class="metric"><div class="metric-label">Win rate</div><div class="metric-value" id="owr">—</div></div>
+    <div class="metric"><div class="metric-label">Average return</div><div class="metric-value" id="oavg">—</div></div>
+    <div class="metric"><div class="metric-label">Best return</div><div class="metric-value gold" id="obest">—</div></div>
+  </div>
+
+  <div class="pending" id="pending">
+    Real option results will populate as the new option tracker closes contracts.
+    The earlier stock-signal history remains separate below and is never mixed into these statistics.
+  </div>
+
+  <div class="table-card" style="margin-top:18px">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Closed</th><th>Symbol</th><th>Contract</th><th>Entry ASK</th><th>Exit BID</th><th>Return</th>
+        </tr></thead>
+        <tbody id="options"><tr><td colspan="6">Waiting for real option closes…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2 class="legacy-title">Earlier strategy history</h2>
+  <p class="sub">
+    Phase 6B underlying-stock results collected before exact option tracking.
+    These are shown for transparency and excluded from option-return statistics.
+  </p>
+
+  <div class="table-card" style="margin-top:18px">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Closed</th><th>Symbol</th><th>Bias</th>
+          <th>Stock entry</th><th>Stock exit</th><th>Stock move</th>
+        </tr></thead>
+        <tbody id="underlying"><tr><td colspan="6">Loading earlier results…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div>
+    <h2>Results first. Membership second.</h2>
+    <p>Review the public record, then subscribe directly through Telegram.</p>
+  </div>
+  {% if bot_username %}
+  <div class="actions" style="margin-top:0">
+    <a class="btn subscribe" href="https://t.me/{{ bot_username }}?start=subscribe">Get Access — {{ stars }} ⭐</a>
+  </div>
+  {% endif %}
+</section>
+</main>
+
+<footer>
+Options involve substantial risk and can lose their entire value. Historical results do not
+guarantee future performance. Displayed prices are the recorded references received from the
+connected strategy system. This service is informational/educational and is not individualized investment advice.
+</footer>
+</div>
+
+<script>
+const pct=n=>`${Number(n||0)>=0?"+":""}${Number(n||0).toFixed(2)}%`;
+const money=n=>`$${Number(n||0).toFixed(2)}`;
+const cls=n=>Number(n)>0?"pos":Number(n)<0?"neg":"";
+const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+.replaceAll('"',"&quot;").replaceAll("'","&#039;");
+
+async function load(){
+  try{
+    const r=await fetch("/api/dashboard",{cache:"no-store"});
+    const d=await r.json();
+    const s=d.option_stats||{};
+    const total=Number(s.total_trades||0);
+
+    document.getElementById("ototal").textContent=total;
+    document.getElementById("owins").textContent=Number(s.wins||0);
+    document.getElementById("owr").textContent=total?Number(s.win_rate||0).toFixed(2)+"%":"Pending";
+    document.getElementById("oavg").textContent=total?pct(s.avg_pnl_pct):"Pending";
+    document.getElementById("obest").textContent=total?pct(s.best_pnl_pct):"Pending";
+    document.getElementById("pending").style.display=total?"none":"block";
+
+    const opts=d.recent_options||[];
+    document.getElementById("options").innerHTML=opts.length?opts.map(t=>{
+      const c=t.closed_at?new Date(t.closed_at).toLocaleString():"—";
+      const contract=`${t.strike} ${t.option_type} · ${t.expiry}`;
+      return `<tr>
+        <td>${esc(c)}</td><td class="symbol">${esc(t.ticker)}</td>
+        <td class="contract">${esc(contract)}</td>
+        <td>${money(t.entry_price)}</td><td>${money(t.exit_price)}</td>
+        <td class="${cls(t.pnl_pct)}">${pct(t.pnl_pct)}</td>
+      </tr>`;
+    }).join(""):'<tr><td colspan="6">No real option contracts have closed yet.</td></tr>';
+
+    const hist=d.recent_underlying||[];
+    document.getElementById("underlying").innerHTML=hist.length?hist.map(t=>{
+      const c=t.closed_at?new Date(t.closed_at).toLocaleString():"—";
+      return `<tr>
+        <td>${esc(c)}</td><td class="symbol">${esc(t.ticker)}</td>
+        <td><span class="pill">${esc(t.option_type||"—")} bias</span></td>
+        <td>${money(t.entry_price)}</td><td>${money(t.exit_price)}</td>
+        <td class="${cls(t.pnl_pct)}">${pct(t.pnl_pct)}</td>
+      </tr>`;
+    }).join(""):'<tr><td colspan="6">No earlier results.</td></tr>';
+  }catch(e){
+    document.getElementById("options").innerHTML='<tr><td colspan="6">Results temporarily unavailable.</td></tr>';
+  }
+}
+load();
+setInterval(load,30000);
+</script>
+</body>
+</html>
