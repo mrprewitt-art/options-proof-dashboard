@@ -34,7 +34,16 @@ CREATE TABLE IF NOT EXISTS closed_trades (
     strike TEXT,
     expiry TEXT,
     entry_price DOUBLE PRECISION NOT NULL,
+    tp1_price DOUBLE PRECISION,
+    tp1_return_pct DOUBLE PRECISION,
+    tp1_size_pct DOUBLE PRECISION,
+    tp1_at TIMESTAMPTZ,
+    tp2_price DOUBLE PRECISION,
+    tp2_return_pct DOUBLE PRECISION,
+    tp2_size_pct DOUBLE PRECISION,
+    tp2_at TIMESTAMPTZ,
     exit_price DOUBLE PRECISION NOT NULL,
+    exit_return_pct DOUBLE PRECISION,
     pnl_pct DOUBLE PRECISION NOT NULL,
     opened_at TIMESTAMPTZ,
     closed_at TIMESTAMPTZ NOT NULL,
@@ -44,6 +53,18 @@ CREATE TABLE IF NOT EXISTS closed_trades (
 CREATE INDEX IF NOT EXISTS idx_closed_trades_closed ON closed_trades(closed_at DESC);
 """
 
+MIGRATIONS = [
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS tp1_price DOUBLE PRECISION",
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS tp1_return_pct DOUBLE PRECISION",
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS tp1_size_pct DOUBLE PRECISION",
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS tp1_at TIMESTAMPTZ",
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS tp2_price DOUBLE PRECISION",
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS tp2_return_pct DOUBLE PRECISION",
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS tp2_size_pct DOUBLE PRECISION",
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS tp2_at TIMESTAMPTZ",
+    "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS exit_return_pct DOUBLE PRECISION",
+]
+
 @contextmanager
 def connect():
     with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
@@ -51,7 +72,9 @@ def connect():
 
 with connect() as conn:
     conn.execute(SCHEMA)
-    # The public site is results-only. Remove the mistakenly-added live-event store.
+    for stmt in MIGRATIONS:
+        conn.execute(stmt)
+    # Public site stays results-only. No live lifecycle/event table.
     conn.execute("DROP TABLE IF EXISTS alert_events")
 
 class ClosedTradeIn(BaseModel):
@@ -60,7 +83,18 @@ class ClosedTradeIn(BaseModel):
     strike: Optional[str] = None
     expiry: Optional[str] = None
     entry_price: float = Field(ge=0)
+    tp1_price: Optional[float] = Field(default=None, ge=0)
+    tp1_return_pct: Optional[float] = None
+    tp1_size_pct: Optional[float] = Field(default=None, ge=0, le=100)
+    tp1_at: Optional[str] = None
+    tp2_price: Optional[float] = Field(default=None, ge=0)
+    tp2_return_pct: Optional[float] = None
+    tp2_size_pct: Optional[float] = Field(default=None, ge=0, le=100)
+    tp2_at: Optional[str] = None
     exit_price: float = Field(ge=0)
+    exit_return_pct: Optional[float] = None
+    # pnl_pct is the total realized trade return after any partial TPs.
+    # For legacy/no-TP trades it is identical to the final exit return.
     pnl_pct: float
     opened_at: Optional[str] = None
     closed_at: str
@@ -98,7 +132,10 @@ def dashboard_data(limit: int = 50) -> dict:
         stats = _stats(conn)
         rows = conn.execute(
             """
-            SELECT ticker, option_type, strike, expiry, entry_price, exit_price,
+            SELECT ticker, option_type, strike, expiry, entry_price,
+                   tp1_price, tp1_return_pct, tp1_size_pct, tp1_at,
+                   tp2_price, tp2_return_pct, tp2_size_pct, tp2_at,
+                   exit_price, COALESCE(exit_return_pct, pnl_pct) AS exit_return_pct,
                    pnl_pct, opened_at, closed_at, notes
             FROM closed_trades
             WHERE source_trade_id LIKE %s
@@ -107,8 +144,12 @@ def dashboard_data(limit: int = 50) -> dict:
             """,
             (SOURCE_PREFIX + "%", limit),
         ).fetchall()
-    cols = ["ticker", "option_type", "strike", "expiry", "entry_price", "exit_price",
-            "pnl_pct", "opened_at", "closed_at", "notes"]
+    cols = [
+        "ticker", "option_type", "strike", "expiry", "entry_price",
+        "tp1_price", "tp1_return_pct", "tp1_size_pct", "tp1_at",
+        "tp2_price", "tp2_return_pct", "tp2_size_pct", "tp2_at",
+        "exit_price", "exit_return_pct", "pnl_pct", "opened_at", "closed_at", "notes",
+    ]
     return {"option_stats": stats, "recent_options": [dict(zip(cols, r)) for r in rows]}
 
 
@@ -147,15 +188,30 @@ async def closed_trade(trade: ClosedTradeIn, x_trade_secret: Optional[str] = Hea
             """
             INSERT INTO closed_trades(
                 source_trade_id, ticker, option_type, strike, expiry,
-                entry_price, exit_price, pnl_pct, opened_at, closed_at, notes
+                entry_price,
+                tp1_price, tp1_return_pct, tp1_size_pct, tp1_at,
+                tp2_price, tp2_return_pct, tp2_size_pct, tp2_at,
+                exit_price, exit_return_pct, pnl_pct,
+                opened_at, closed_at, notes
             )
-            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,NULLIF(%s,'')::timestamptz,%s::timestamptz,%s)
+            VALUES(
+                %s,%s,%s,%s,%s,%s,
+                %s,%s,%s,NULLIF(%s,'')::timestamptz,
+                %s,%s,%s,NULLIF(%s,'')::timestamptz,
+                %s,%s,%s,
+                NULLIF(%s,'')::timestamptz,%s::timestamptz,%s
+            )
             ON CONFLICT(source_trade_id) DO NOTHING
             RETURNING id
             """,
-            (source_id, trade.ticker.strip().upper(), option_type, trade.strike, trade.expiry,
-             float(trade.entry_price), float(trade.exit_price), float(trade.pnl_pct),
-             trade.opened_at or "", trade.closed_at, trade.notes),
+            (
+                source_id, trade.ticker.strip().upper(), option_type, trade.strike, trade.expiry,
+                float(trade.entry_price),
+                trade.tp1_price, trade.tp1_return_pct, trade.tp1_size_pct, trade.tp1_at or "",
+                trade.tp2_price, trade.tp2_return_pct, trade.tp2_size_pct, trade.tp2_at or "",
+                float(trade.exit_price), trade.exit_return_pct, float(trade.pnl_pct),
+                trade.opened_at or "", trade.closed_at, trade.notes,
+            ),
         ).fetchone()
     return {"ok": True, "created": bool(row)}
 
@@ -164,4 +220,10 @@ async def closed_trade(trade: ClosedTradeIn, x_trade_secret: Optional[str] = Hea
 async def health():
     with connect() as conn:
         conn.execute("SELECT 1").fetchone()
-    return {"ok": True, "database": "neon-postgres", "results_only": True, "production_feed": "SNIPER_PRODUCTION_V3"}
+    return {
+        "ok": True,
+        "database": "neon-postgres",
+        "results_only": True,
+        "tp_ready": True,
+        "production_feed": "SNIPER_PRODUCTION_V3",
+    }
