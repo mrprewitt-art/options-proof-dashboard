@@ -1,44 +1,13 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Closed Sniper options results and Telegram access."><title>{{ brand }}</title>
-<style>:root{--g:#21b75b;--gold:#f3c84b;--p:#102a18;--mut:#9cbea5;--line:#285235;--loss:#ff7777}*{box-sizing:border-box}body{margin:0;background:linear-gradient(#07170d,#030805);color:#f7fff9;font:14px system-ui}.shell{width:min(1160px,calc(100% - 28px));margin:auto}header{display:flex;justify-content:space-between;padding:24px 0}.brand{font-size:20px;font-weight:900}.proof{color:#bff3cc}.hero{padding:58px 0 34px}h1{font-size:clamp(42px,7vw,74px);line-height:1;margin:0 0 18px}.gold{color:var(--gold)}p{color:var(--mut);line-height:1.6}.btn{display:inline-block;padding:14px 20px;border-radius:12px;background:var(--g);color:#041008;text-decoration:none;font-weight:900}.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}.metric,.card{background:var(--p);border:1px solid var(--line);border-radius:16px;padding:16px}.metric b{display:block;font-size:28px;margin-top:7px}.section{padding:34px 0}table{width:100%;border-collapse:collapse;min-width:1180px}.card{padding:0;overflow:hidden}.card.wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:auto;overscroll-behavior-x:contain}th,td{padding:13px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}th{color:var(--mut);font-size:11px}.pos{color:#58d87f;font-weight:900}.neg{color:var(--loss);font-weight:900}.milestone{font-weight:800}.subline{display:block;color:var(--mut);font-size:11px;font-weight:600;margin-top:3px}.dash{color:#6f8e76}@media(max-width:800px){.metrics{grid-template-columns:1fr 1fr}.card.wrap{max-width:100%;overflow-x:auto;overflow-y:hidden}.card.wrap table{min-width:1180px}}</style></head>
+<style>:root{--g:#21b75b;--gold:#f3c84b;--p:#102a18;--mut:#9cbea5;--line:#285235;--loss:#ff7777}*{box-sizing:border-box}body{margin:0;background:linear-gradient(#07170d,#030805);color:#f7fff9;font:14px system-ui}.shell{width:min(1250px,calc(100% - 28px));margin:auto}header{display:flex;justify-content:space-between;padding:24px 0}.brand{font-size:20px;font-weight:900}.proof{color:#bff3cc}.hero{padding:58px 0 34px}h1{font-size:clamp(42px,7vw,74px);line-height:1;margin:0 0 18px}.gold{color:var(--gold)}p{color:var(--mut);line-height:1.6}.btn{display:inline-block;padding:14px 20px;border-radius:12px;background:var(--g);color:#041008;text-decoration:none;font-weight:900}.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}.metric,.card{background:var(--p);border:1px solid var(--line);border-radius:16px;padding:16px}.metric b{display:block;font-size:28px;margin-top:7px}.section{padding:34px 0}table{width:100%;border-collapse:collapse;min-width:1180px}.card{padding:0;overflow:hidden}.card.wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:auto;overscroll-behavior-x:contain}th,td{padding:13px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:var(--mut);font-size:11px}.pos{color:#58d87f;font-weight:900}.neg{color:var(--loss);font-weight:900}.tp{color:var(--gold);font-weight:800}.sub{display:block;color:var(--mut);font-size:11px;margin-top:3px}@media(max-width:800px){.metrics{grid-template-columns:1fr 1fr}.card.wrap{max-width:100%;overflow-x:auto;overflow-y:hidden}.card.wrap table{min-width:1180px}}</style></head>
 <body><div class="shell"><header><div class="brand">{{ brand }}</div><div class="proof">● Closed results only</div></header>
-<section class="hero"><h1>See the results.<br><span class="gold">Then follow the alerts.</span></h1><p>Only closed option trades from the current Sniper production bot are shown here. When a trade uses partial profit-taking, TP1 and TP2 are included with the final exit after the trade is closed. Live entries, holds, developing trades and exit watches stay inside Telegram.</p>{% if bot_username %}<a class="btn" href="https://t.me/{{ bot_username }}?start=subscribe">Get Telegram Access — {{ stars }} ⭐ / 30 days</a>{% endif %}</section>
-<section class="section"><h2>Closed Sniper option results</h2><div class="metrics"><div class="metric">Closed<b id="total">—</b></div><div class="metric">Winners<b id="wins">—</b></div><div class="metric">Win rate<b id="wr">—</b></div><div class="metric">Average<b id="avg">—</b></div><div class="metric">Best<b id="best">—</b></div></div><div class="card wrap"><table><thead><tr><th>Closed</th><th>Symbol</th><th>Contract</th><th>Entry ASK</th><th>TP1</th><th>TP2</th><th>Final Exit</th><th>Realized Return</th><th>Exit reason</th></tr></thead><tbody id="trades"></tbody></table></div></section>
-<footer><p>Options involve substantial risk and can lose their entire value. Historical results do not guarantee future performance. This service is informational/educational and is not individualized investment advice.</p></footer></div>
+<section class="hero"><h1>See the results.<br><span class="gold">Then follow the alerts.</span></h1><p>Only completed option trades from the current Sniper production bot are shown here. Each stock signal tracks one selected option call. A closed row preserves that call's full recorded lifecycle: entry, profit takes, final exit and realized return. Live entries, holds, developing trades, TP alerts and exit watches stay inside Telegram.</p>{% if bot_username %}<a class="btn" href="https://t.me/{{ bot_username }}?start=subscribe">Get Telegram Access — {{ stars }} ⭐ / 30 days</a>{% endif %}</section>
+<section class="section"><h2>Closed Sniper option results</h2><div class="metrics"><div class="metric">Closed<b id="total">—</b></div><div class="metric">Winners<b id="wins">—</b></div><div class="metric">Win rate<b id="wr">—</b></div><div class="metric">Average<b id="avg">—</b></div><div class="metric">Best<b id="best">—</b></div></div>
+<div class="card wrap"><table><thead><tr><th>Closed</th><th>Symbol</th><th>Play Type</th><th>Contract</th><th>Entry ASK</th><th>TP1</th><th>TP2</th><th>Final Exit</th><th>Realized Return</th><th>Exit reason</th></tr></thead><tbody id="trades"></tbody></table></div></section>
+<footer><p>Options involve substantial risk and can lose their entire value. Historical results do not guarantee future performance. Displayed prices are recorded references from the connected strategy system. This service is informational/educational and is not individualized investment advice.</p></footer></div>
 <script>
 const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-const pct=n=>`${Number(n)>=0?'+':''}${Number(n).toFixed(2)}%`;
-const money=n=>`$${Number(n||0).toFixed(2)}`;
-const has=n=>n!==null&&n!==undefined&&n!==''&&Number.isFinite(Number(n));
-function milestone(price,ret,size){
-  if(!has(price)) return '<span class="dash">—</span>';
-  const bits=[];
-  if(has(ret)) bits.push(pct(ret));
-  if(has(size)) bits.push(`${Number(size).toFixed(0)}% position`);
-  return `<span class="milestone">${money(price)}</span>${bits.length?`<span class="subline">${bits.join(' · ')}</span>`:''}`;
-}
-function finalExit(t){
-  const ret=has(t.exit_return_pct)?t.exit_return_pct:t.pnl_pct;
-  return `<span class="milestone">${money(t.exit_price)}</span>${has(ret)?`<span class="subline">${pct(ret)} on exit portion</span>`:''}`;
-}
-async function load(){
-  const r=await fetch('/api/dashboard',{cache:'no-store'});
-  const d=await r.json(),s=d.option_stats||{};
-  total.textContent=s.total_trades||0;
-  wins.textContent=s.wins||0;
-  wr.textContent=(s.total_trades?Number(s.win_rate).toFixed(1)+'%':'Pending');
-  avg.textContent=s.total_trades?pct(s.avg_pnl_pct):'Pending';
-  best.textContent=s.total_trades?pct(s.best_pnl_pct):'Pending';
-  trades.innerHTML=(d.recent_options||[]).map(t=>`<tr>
-    <td>${new Date(t.closed_at).toLocaleString()}</td>
-    <td><b>${esc(t.ticker)}</b></td>
-    <td>${esc(t.strike)} ${esc(t.option_type)} · ${esc(t.expiry)}</td>
-    <td>${money(t.entry_price)}</td>
-    <td>${milestone(t.tp1_price,t.tp1_return_pct,t.tp1_size_pct)}</td>
-    <td>${milestone(t.tp2_price,t.tp2_return_pct,t.tp2_size_pct)}</td>
-    <td>${finalExit(t)}</td>
-    <td class="${Number(t.pnl_pct)>=0?'pos':'neg'}">${pct(t.pnl_pct)}</td>
-    <td>${esc(t.notes||'')}</td>
-  </tr>`).join('')||'<tr><td colspan="9">No closed Sniper production trades yet.</td></tr>'
-}
-load();setInterval(load,30000)
+const pct=n=>`${Number(n)>=0?'+':''}${Number(n).toFixed(2)}%`; const money=n=>`$${Number(n||0).toFixed(2)}`;
+const leg=(price,ret,size)=>price==null?'—':`<span class="tp">${money(price)} · ${pct(ret)}</span><span class="sub">${Number(size||0).toFixed(0)}% of original</span>`;
+async function load(){const r=await fetch('/api/dashboard',{cache:'no-store'});const d=await r.json(),s=d.option_stats||{};total.textContent=s.total_trades||0;wins.textContent=s.wins||0;wr.textContent=(s.total_trades?Number(s.win_rate).toFixed(1)+'%':'Pending');avg.textContent=s.total_trades?pct(s.avg_pnl_pct):'Pending';best.textContent=s.total_trades?pct(s.best_pnl_pct):'Pending';trades.innerHTML=(d.recent_options||[]).map(t=>`<tr><td>${new Date(t.closed_at).toLocaleString()}</td><td><b>${esc(t.ticker)}</b></td><td><b>${esc(t.trade_lane||'Core Call')}</b></td><td>${esc(t.strike)} ${esc(t.option_type)} · ${esc(t.expiry)}</td><td>${money(t.entry_price)}</td><td>${leg(t.tp1_price,t.tp1_return_pct,t.tp1_size_pct)}</td><td>${leg(t.tp2_price,t.tp2_return_pct,t.tp2_size_pct)}</td><td>${money(t.exit_price)}<span class="sub">${pct(t.exit_return_pct)}</span></td><td class="${Number(t.pnl_pct)>=0?'pos':'neg'}">${pct(t.pnl_pct)}</td><td>${esc(t.notes||'')}</td></tr>`).join('')||'<tr><td colspan="10">No closed Sniper production trades yet.</td></tr>'}load();setInterval(load,30000)
 </script></body></html>
