@@ -6,7 +6,7 @@ from typing import Optional
 import psycopg
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS closed_trades(
  exit_price DOUBLE PRECISION NOT NULL,exit_return_pct DOUBLE PRECISION,pnl_pct DOUBLE PRECISION NOT NULL,
  opened_at TIMESTAMPTZ,closed_at TIMESTAMPTZ NOT NULL,notes TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE INDEX IF NOT EXISTS idx_closed_trades_closed ON closed_trades(closed_at DESC);
+CREATE TABLE IF NOT EXISTS telegram_access_clicks(
+ id BIGSERIAL PRIMARY KEY, source TEXT NOT NULL DEFAULT 'website', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE INDEX IF NOT EXISTS idx_telegram_access_clicks_created ON telegram_access_clicks(created_at DESC);
 """
 MIGRATIONS=[
  "ALTER TABLE closed_trades ADD COLUMN IF NOT EXISTS trade_lane TEXT",
@@ -99,7 +102,23 @@ async def closed_trade(trade:ClosedTradeIn,x_trade_secret:Optional[str]=Header(d
            float(trade.exit_price),trade.exit_return_pct,float(trade.pnl_pct),trade.opened_at or "",trade.closed_at,trade.notes)).fetchone()
     return {"ok":True,"created":bool(row)}
 
+@app.get("/telegram-access")
+async def telegram_access(request:Request):
+    if not BOT_USERNAME:
+        raise HTTPException(503,"Telegram membership bot is not configured")
+    source=(request.query_params.get("source") or "website")[:64]
+    try:
+        with connect() as conn:
+            conn.execute("INSERT INTO telegram_access_clicks(source) VALUES(%s)",(source,))
+    except Exception:
+        pass
+    return RedirectResponse(url=f"https://t.me/{BOT_USERNAME}?start=subscribe",status_code=302)
+
+@app.get("/api/telegram-access")
+async def telegram_access_status():
+    return {"ok":bool(BOT_USERNAME),"bot_username":BOT_USERNAME or None,"start_parameter":"subscribe","monthly_stars":MONTHLY_STARS}
+
 @app.get("/health")
 async def health():
     with connect() as conn: conn.execute("SELECT 1").fetchone()
-    return {"ok":True,"database":"neon-postgres","results_only":True,"tp_ready":True,"production_feed":"SNIPER_PRODUCTION_V3_5","single_option_ready":True}
+    return {"ok":True,"database":"neon-postgres","results_only":True,"production_feed":"SNIPER_STAGE12L","telegram_access_configured":bool(BOT_USERNAME),"telegram_start_parameter":"subscribe"}
