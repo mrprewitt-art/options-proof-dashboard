@@ -6,7 +6,7 @@ from typing import Optional
 import psycopg
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
@@ -18,7 +18,7 @@ LEGACY_BOT_USERNAME=os.getenv("BOT_USERNAME","").strip().lstrip("@")
 MEMBERSHIP_BOT_USERNAME=os.getenv("MEMBERSHIP_BOT_USERNAME","Precise3_Bot").strip().lstrip("@") or "Precise3_Bot"
 MONTHLY_STARS=int(os.getenv("MONTHLY_STARS","500"))
 SOURCE_PREFIX="sniper-prod-v3:"
-if not DATABASE_URL: raise RuntimeError("DATABASE_URL is required")
+
 
 app=FastAPI(title="Sniper Closed Results")
 templates=Jinja2Templates(directory=str(Path(__file__).parent/"templates"))
@@ -50,10 +50,24 @@ MIGRATIONS=[
 @contextmanager
 def connect():
     with psycopg.connect(DATABASE_URL,autocommit=True) as conn: yield conn
-with connect() as conn:
-    conn.execute(SCHEMA)
-    for stmt in MIGRATIONS: conn.execute(stmt)
-    conn.execute("DROP TABLE IF EXISTS alert_events")
+DB_INIT_ERROR=None
+def init_db():
+    global DB_INIT_ERROR
+    if not DATABASE_URL:
+        DB_INIT_ERROR="DATABASE_URL is not configured"
+        return False
+    try:
+        with connect() as conn:
+            conn.execute(SCHEMA)
+            for stmt in MIGRATIONS: conn.execute(stmt)
+            conn.execute("DROP TABLE IF EXISTS alert_events")
+        DB_INIT_ERROR=None
+        return True
+    except Exception as e:
+        DB_INIT_ERROR=f"{type(e).__name__}: {e}"
+        return False
+
+init_db()
 
 class ClosedTradeIn(BaseModel):
     ticker:str; option_type:str; trade_lane:Optional[str]=None; strike:Optional[str]=None; expiry:Optional[str]=None
@@ -69,6 +83,8 @@ def _stats(conn):
     return {"total_trades":total,"wins":wins,"losses_or_flat":int(row[2] or 0),"win_rate":round(wins/total*100,2) if total else 0.0,"avg_pnl_pct":round(float(row[3] or 0),2),"best_pnl_pct":round(float(row[4] or 0),2)}
 
 def dashboard_data(limit=50):
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not configured")
     with connect() as conn:
         stats=_stats(conn)
         rows=conn.execute("""SELECT ticker,option_type,trade_lane,strike,expiry,entry_price,
@@ -81,7 +97,11 @@ def dashboard_data(limit=50):
 @app.get("/",response_class=HTMLResponse)
 async def home(request:Request): return templates.TemplateResponse(request=request,name="index.html",context={"brand":BRAND_NAME,"bot_username":MEMBERSHIP_BOT_USERNAME,"stars":MONTHLY_STARS})
 @app.get("/api/dashboard")
-async def get_dashboard(): return dashboard_data()
+async def get_dashboard():
+    try:
+        return dashboard_data()
+    except Exception as e:
+        return JSONResponse(status_code=503,content={"ok":False,"database_available":False,"error":"Results database temporarily unavailable"})
 
 def _auth(secret):
     if not TRADE_INGEST_SECRET: raise HTTPException(503,"Trade ingestion is not configured")
@@ -103,23 +123,53 @@ async def closed_trade(trade:ClosedTradeIn,x_trade_secret:Optional[str]=Header(d
            float(trade.exit_price),trade.exit_return_pct,float(trade.pnl_pct),trade.opened_at or "",trade.closed_at,trade.notes)).fetchone()
     return {"ok":True,"created":bool(row)}
 
-@app.get("/telegram-access")
+@app.get("/telegram-access",response_class=HTMLResponse)
 async def telegram_access(request:Request):
     if not MEMBERSHIP_BOT_USERNAME:
         raise HTTPException(503,"Telegram membership bot is not configured")
     source=(request.query_params.get("source") or "website")[:64]
     try:
-        with connect() as conn:
-            conn.execute("INSERT INTO telegram_access_clicks(source) VALUES(%s)",(source,))
+        if DATABASE_URL:
+            with connect() as conn:
+                conn.execute("INSERT INTO telegram_access_clicks(source) VALUES(%s)",(source,))
     except Exception:
         pass
-    return RedirectResponse(url=f"https://t.me/{MEMBERSHIP_BOT_USERNAME}?start=subscribe",status_code=302)
+    bot=MEMBERSHIP_BOT_USERNAME
+    app_link=f"tg://resolve?domain={bot}&start=subscribe"
+    web_link=f"https://web.telegram.org/k/#@{bot}"
+    html=f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Telegram Access</title><style>
+    :root{{--g:#21b75b;--gold:#f3c84b;--p:#102a18;--mut:#9cbea5;--line:#285235}}
+    *{{box-sizing:border-box}}body{{margin:0;background:linear-gradient(#07170d,#030805);color:#f7fff9;font:16px system-ui;min-height:100vh;display:grid;place-items:center}}
+    .card{{width:min(620px,calc(100% - 28px));background:var(--p);border:1px solid var(--line);border-radius:18px;padding:28px}}
+    h1{{margin:0 0 10px;font-size:34px}}p{{color:var(--mut);line-height:1.6}}.gold{{color:var(--gold)}}
+    .btn{{display:block;text-align:center;margin:12px 0;padding:14px 18px;border-radius:12px;background:var(--g);color:#041008;text-decoration:none;font-weight:900}}
+    .btn.alt{{background:transparent;color:#f7fff9;border:1px solid var(--line)}}code{{color:var(--gold);font-size:17px}}
+    .note{{font-size:13px}} </style></head><body><main class="card">
+    <h1>Telegram <span class="gold">Access</span></h1>
+    <p>Choose the Telegram client you actually use. This avoids Telegram's public <b>Start Bot</b> page, which can fail on some Windows/browser setups.</p>
+    <a class="btn" href="{app_link}">Open Telegram App</a>
+    <a class="btn alt" href="{web_link}" target="_blank" rel="noopener">Open Telegram Web</a>
+    <p>If Telegram opens the chat without starting checkout, send <code>/subscribe</code> to <b>@{bot}</b>. That command starts the same subscription flow.</p>
+    <p class="note">Bot: @{bot} · Subscription: {MONTHLY_STARS} ⭐ / 30 days</p>
+    <p><a href="/" style="color:#f3c84b">← Back to results</a></p>
+    </main></body></html>"""
+    return HTMLResponse(content=html,status_code=200)
 
 @app.get("/api/telegram-access")
 async def telegram_access_status():
-    return {"ok":bool(MEMBERSHIP_BOT_USERNAME),"bot_username":MEMBERSHIP_BOT_USERNAME or None,"legacy_bot_username":LEGACY_BOT_USERNAME or None,"start_parameter":"subscribe","monthly_stars":MONTHLY_STARS}
+    return {"ok":bool(MEMBERSHIP_BOT_USERNAME),"bot_username":MEMBERSHIP_BOT_USERNAME or None,"legacy_bot_username":LEGACY_BOT_USERNAME or None,"start_parameter":"subscribe","monthly_stars":MONTHLY_STARS,"app_link":f"tg://resolve?domain={MEMBERSHIP_BOT_USERNAME}&start=subscribe","web_link":f"https://web.telegram.org/k/#@{MEMBERSHIP_BOT_USERNAME}"}
 
 @app.get("/health")
 async def health():
-    with connect() as conn: conn.execute("SELECT 1").fetchone()
-    return {"ok":True,"database":"neon-postgres","results_only":True,"production_feed":"SNIPER_STAGE12L","telegram_access_configured":bool(MEMBERSHIP_BOT_USERNAME),"telegram_membership_bot":MEMBERSHIP_BOT_USERNAME,"telegram_start_parameter":"subscribe"}
+    db_ok=False
+    db_error=None
+    if DATABASE_URL:
+        try:
+            with connect() as conn: conn.execute("SELECT 1").fetchone()
+            db_ok=True
+        except Exception as e:
+            db_error=f"{type(e).__name__}: {e}"
+    else:
+        db_error="DATABASE_URL is not configured"
+    return {"ok":True,"database_available":db_ok,"database":"neon-postgres" if db_ok else None,"database_error":db_error,"results_only":True,"production_feed":"SNIPER_STAGE12L","telegram_access_configured":bool(MEMBERSHIP_BOT_USERNAME),"telegram_membership_bot":MEMBERSHIP_BOT_USERNAME,"telegram_start_parameter":"subscribe"}
