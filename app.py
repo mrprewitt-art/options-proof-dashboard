@@ -14,7 +14,8 @@ load_dotenv()
 DATABASE_URL=os.getenv("DATABASE_URL","").strip()
 TRADE_INGEST_SECRET=os.getenv("TRADE_INGEST_SECRET","").strip()
 BRAND_NAME=os.getenv("BRAND_NAME","Private Options Alerts").strip()
-BOT_USERNAME=os.getenv("BOT_USERNAME","").strip().lstrip("@")
+LEGACY_BOT_USERNAME=os.getenv("BOT_USERNAME","").strip().lstrip("@")
+MEMBERSHIP_BOT_USERNAME=os.getenv("MEMBERSHIP_BOT_USERNAME","Precise3_Bot").strip().lstrip("@") or "Precise3_Bot"
 MONTHLY_STARS=int(os.getenv("MONTHLY_STARS","500"))
 SOURCE_PREFIX="sniper-prod-v3:"
 if not DATABASE_URL: raise RuntimeError("DATABASE_URL is required")
@@ -78,7 +79,7 @@ def dashboard_data(limit=50):
     return {"option_stats":stats,"recent_options":[dict(zip(cols,r)) for r in rows]}
 
 @app.get("/",response_class=HTMLResponse)
-async def home(request:Request): return templates.TemplateResponse(request=request,name="index.html",context={"brand":BRAND_NAME,"bot_username":BOT_USERNAME,"stars":MONTHLY_STARS})
+async def home(request:Request): return templates.TemplateResponse(request=request,name="index.html",context={"brand":BRAND_NAME,"bot_username":MEMBERSHIP_BOT_USERNAME,"stars":MONTHLY_STARS})
 @app.get("/api/dashboard")
 async def get_dashboard(): return dashboard_data()
 
@@ -104,7 +105,7 @@ async def closed_trade(trade:ClosedTradeIn,x_trade_secret:Optional[str]=Header(d
 
 @app.get("/telegram-access")
 async def telegram_access(request:Request):
-    if not BOT_USERNAME:
+    if not MEMBERSHIP_BOT_USERNAME:
         raise HTTPException(503,"Telegram membership bot is not configured")
     source=(request.query_params.get("source") or "website")[:64]
     try:
@@ -112,13 +113,13 @@ async def telegram_access(request:Request):
             conn.execute("INSERT INTO telegram_access_clicks(source) VALUES(%s)",(source,))
     except Exception:
         pass
-    return RedirectResponse(url=f"https://t.me/{BOT_USERNAME}?start=subscribe",status_code=302)
+    return RedirectResponse(url=f"https://t.me/{MEMBERSHIP_BOT_USERNAME}?start=subscribe",status_code=302)
 
 @app.get("/api/telegram-access")
 async def telegram_access_status():
-    return {"ok":bool(BOT_USERNAME),"bot_username":BOT_USERNAME or None,"start_parameter":"subscribe","monthly_stars":MONTHLY_STARS}
+    return {"ok":bool(MEMBERSHIP_BOT_USERNAME),"bot_username":MEMBERSHIP_BOT_USERNAME or None,"legacy_bot_username":LEGACY_BOT_USERNAME or None,"start_parameter":"subscribe","monthly_stars":MONTHLY_STARS}
 
 @app.get("/health")
 async def health():
     with connect() as conn: conn.execute("SELECT 1").fetchone()
-    return {"ok":True,"database":"neon-postgres","results_only":True,"production_feed":"SNIPER_STAGE12L","telegram_access_configured":bool(BOT_USERNAME),"telegram_start_parameter":"subscribe"}
+    return {"ok":True,"database":"neon-postgres","results_only":True,"production_feed":"SNIPER_STAGE12L","telegram_access_configured":bool(MEMBERSHIP_BOT_USERNAME),"telegram_membership_bot":MEMBERSHIP_BOT_USERNAME,"telegram_start_parameter":"subscribe"}
